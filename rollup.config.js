@@ -21,9 +21,13 @@ plugins: [
     // This custom plugin is needed to fix crappy commonjs module imports
     {
         transform ( code, id ) {
+            const replacement = 'import * as $1_ from \'$2\';const $1 = $1_;';
             return code.replace(
-                /(?:import[ \t]+\*[ \t]+as[ \t]+(.*)[ \t]+from[ \t]+['"](.*)['"]|import[ \t]+(.*)[ \t]+=[ \t]+require(['"](.*)['"]))/g,
-                'import * as $1_ from \'$2\';const $1 = $1_;'
+                /import[ \t]+\*[ \t]+as[ \t]+(.*)[ \t]+from[ \t]+['"](.*)['"]/g,
+                replacement
+            ).replace(
+                /import[ \t]+(.*)[ \t]+=[ \t]+require\(['"](.*)['"]\)/g,
+                replacement
             );
         }
     },
