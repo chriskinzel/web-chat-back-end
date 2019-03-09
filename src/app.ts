@@ -1,9 +1,18 @@
 import express = require('express');
 import cors = require('cors');
+import cookieParser = require('socket.io-cookie-parser');
+
 import * as socketio from 'socket.io';
 
+import {CommandParser} from './command-parser';
+import {AnonymousMessage} from './models/anonymous-message';
 import {Message} from './models/message';
 import {User} from './models/user';
+
+interface CommandListenerData {
+    socket: socketio.Socket;
+    user: User;
+}
 
 const app = express();
 
@@ -15,44 +24,100 @@ app.use(cors({
     credentials : true
 }));
 
-const users: User[] = [];
+io.use(cookieParser());
+
+const users = new Map<string, {user: User, refCount: number}>();
 const messages: Message[] = [];
 
-// TODO: Cookies for persistent username
-// TODO: Responsiveness
-// TODO: Help, Nickname, and Color commands
+const commandParser = new CommandParser();
+commandParser.on<CommandListenerData>('\\help', event => {
+    event.data.socket.emit('newMessage', new AnonymousMessage(
+        `<b>List of available commands:</b>
+  <b>\\help</b> - prints this help message
+  <b>\\nick [nickname]</b> - change your nickname to <b>[nickname]</b> or leave empty for a new random nickname
+  <b>\\nickcolor RRGGBB</b> - change your nickname color to the specified hexadecimal color code`
+    ));
+});
+commandParser.on<CommandListenerData>(/\\nick\s+(.*)|\\nick/, (event, newNickName) => {
+    if (newNickName === undefined) {
+        do {
+            newNickName = new User().name;
+        } while (users.has(newNickName));
+    }
+
+    if (!users.has(newNickName)) {
+        const oldName = event.data.user.name;
+
+        const userRef = users.get(oldName);
+        users.delete(oldName);
+
+        userRef.user.name = newNickName;
+        users.set(newNickName, userRef);
+
+        event.data.socket.emit('setUser', userRef.user);
+
+        io.emit('updateUser', {target: oldName, updatedUser: userRef.user});
+    } else {
+        event.data.socket.emit('newMessage', new AnonymousMessage(
+            `<b><span style="color: red">ERROR: \\nick ${newNickName} - '${newNickName}' is already taken.</span></b>`
+        ));
+    }
+});
+commandParser.on<CommandListenerData>(/\\nickcolor\s+([A-Fa-f0-9]{0, 6})/,(event, color) => {
+    console.log(color);
+});
 
 io.on('connection', clientSocket => {
-    const user = new User();
-    const userPosition = users.length;
-    users.push(user);
+    const user = User.fromJSON(clientSocket.request.cookies.user) || new User();
+    if (users.has(user.name)) {
+        const userRef = users.get(user.name);
+        userRef.refCount += 1;
+
+        users.set(user.name, userRef);
+    } else {
+        users.set(user.name, {user, refCount: 1});
+
+        // Tell all clients about the new User
+        io.emit('newUser', user);
+    }
 
     // Tell new user who they are
     clientSocket.emit('setUser', user);
 
     // Give new user the list of other users in the chat
-    clientSocket.emit('listUsers', users);
-
-    // Tell all clients about the new User
-    io.emit('newUser', user);
+    clientSocket.emit('listUsers', Array.from(users.values()).map(userRef => userRef.user));
 
     // Give new user the chat log
     clientSocket.emit('listMessages', messages);
 
     // Listen for messages from client
     clientSocket.on('sendMessage', messageContent => {
-        // Broadcast message to all clients
-        const message = new Message(messageContent, user);
-        messages.push(message);
+        // Check if message is command
+        try {
+            commandParser.parseCommand(messageContent, {
+                socket: clientSocket,
+                user: user
+            });
+        } catch (e) {
+            // Broadcast message to all clients
+            const message = new Message(messageContent, user);
 
-        io.emit('newMessage', message);
+            messages.push(message);
+            io.emit('newMessage', message);
+        }
     });
 
     clientSocket.on('disconnect', () => {
-        users.splice(userPosition, 1);
+        const userRef = users.get(user.name);
+        if (userRef.refCount === 1) {
+            users.delete(user.name);
 
-        // Tell all clients to remove the user that just left the chat
-        io.emit('removeUser', user);
+            // Tell all clients to remove the user that just left the chat
+            io.emit('removeUser', user);
+        } else {
+            userRef.refCount -= 1;
+            users.set(user.name, userRef);
+        }
     });
 });
 

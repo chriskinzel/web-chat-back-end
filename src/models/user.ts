@@ -3,8 +3,16 @@ function pickRandom<T>(array: T[]): T {
 }
 
 export class User {
-    public readonly name: string;
-    public readonly color: string;
+    public name: string;
+    public color: string;
+
+    public static fromJSON(json: string): User {
+        try {
+            return JSON.parse(json);
+        } catch (e) {
+            return undefined;
+        }
+    }
 
     constructor() {
         this.name  = this.generateRandomUsername();
