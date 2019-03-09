@@ -50,6 +50,7 @@ const listOfCodingAdjectives = [
     'Simple',
     'Specific',
     'Standard',
+    'Stinky',
     'Temporal'
 ];
 
@@ -77,6 +78,7 @@ const listOfAnimalNames = [
     'Bandicoot',
     'Barb',
     'Barnacle',
+    'Baring',
     'Barracuda',
     'Bat',
     'Beagle',
