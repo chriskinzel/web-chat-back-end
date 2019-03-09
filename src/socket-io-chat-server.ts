@@ -46,24 +46,7 @@ export class SocketIOChatServer {
     }
 
     private onNewUserConnected(user: User, clientSocket: socketio.Socket) {
-        const commandParser = new CommandParser();
-        commandParser.on('help', () => {
-            this.sendHelpMessageToClient(clientSocket);
-        });
-
-        commandParser.on('nick', [/.*?/], newNickName => {
-            this.setUserNickName(user, clientSocket, newNickName);
-        });
-
-        commandParser.on('nickcolor', [/(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})?/],
-                color => {
-                    this.setUserColor(user, color);
-                },
-                misformattedColor => {
-                    this.sendErrorMessageToUser(clientSocket,
-                        `\\nickcolor ${misformattedColor} - '${misformattedColor}' is not a valid three or six digit hexadecimal color.`
-                    )
-                });
+        const commandParser = this.getCommandParserForUser(user, clientSocket);
 
         // Tell new user who they are
         clientSocket.emit('setUser', user);
@@ -98,6 +81,29 @@ export class SocketIOChatServer {
         clientSocket.on('disconnect', () => {
             this.onUserLeave(user);
         });
+    }
+
+    private getCommandParserForUser(user: User, clientSocket: socketio.Socket): CommandParser {
+        const commandParser = new CommandParser();
+        commandParser.on('help', () => {
+            this.sendHelpMessageToClient(clientSocket);
+        });
+
+        commandParser.on('nick', [/.*?/], newNickName => {
+            this.setUserNickName(user, clientSocket, newNickName);
+        });
+
+        commandParser.on('nickcolor', [/(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})?/],
+            color => {
+                this.setUserColor(user, color);
+            },
+            misformattedColor => {
+                this.sendErrorMessageToUser(clientSocket,
+                    `\\nickcolor ${misformattedColor} - '${misformattedColor}' is not a valid three or six digit hexadecimal color.`
+                )
+            });
+
+        return commandParser;
     }
 
     private broadcastChatMessage(message: Message) {
@@ -140,7 +146,10 @@ export class SocketIOChatServer {
                         div({},
                             '- change your nickname color to the specified hexadecimal color code or leave empty for a random color'
                         )
-                    )
+                    ),
+                    li({}, b({}, '\\effect dance | flip | random'), div({},
+                        '- make all users screens perform the given effect'
+                    ))
                 )
             )
         ));
