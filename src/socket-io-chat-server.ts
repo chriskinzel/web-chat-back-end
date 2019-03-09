@@ -103,8 +103,8 @@ export class SocketIOChatServer {
                 )
             });
 
-        commandParser.on('effect', [/dance|flip|random/], effectName => {
-
+        commandParser.on('effect', [/dance|flip|random|stop/], effectName => {
+            this.io.emit('effect', effectName);
         }, unrecognizedEffectName => {
             const command = (unrecognizedEffectName) ? `\\effect ${unrecognizedEffectName}` : '\\effect';
             this.sendErrorMessageToUser(clientSocket,
@@ -157,6 +157,9 @@ export class SocketIOChatServer {
                     ),
                     li({}, b({}, '\\effect dance | flip | random'), div({},
                         '- make all users screens perform the given effect'
+                    )),
+                    li({}, b({}, '\\effect stop'), div({},
+                        '- stop effects started using the previous command'
                     ))
                 )
             )
