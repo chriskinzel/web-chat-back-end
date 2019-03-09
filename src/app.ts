@@ -30,41 +30,60 @@ const users = new Map<string, {user: User, refCount: number}>();
 const messages: Message[] = [];
 
 const commandParser = new CommandParser();
-commandParser.on<CommandListenerData>('\\help', event => {
+
+commandParser.on<CommandListenerData>('help', event => {
     event.data.socket.emit('newMessage', new AnonymousMessage(
         `<b>List of available commands:</b>
   <b>\\help</b> - prints this help message
   <b>\\nick [nickname]</b> - change your nickname to <b>[nickname]</b> or leave empty for a new random nickname
-  <b>\\nickcolor RRGGBB</b> - change your nickname color to the specified hexadecimal color code`
+  <b>\\nickcolor [RRGGBB] | [RGB]</b> - change your nickname color to the specified hexadecimal color code or leave empty for a random color`
     ));
 });
-commandParser.on<CommandListenerData>(/\\nick\s+(.*)|\\nick/, (event, newNickName) => {
-    if (newNickName === undefined) {
-        do {
-            newNickName = new User().name;
-        } while (users.has(newNickName));
-    }
 
-    if (!users.has(newNickName)) {
-        const oldName = event.data.user.name;
+commandParser.on<CommandListenerData>('nick', [/.*?/], (event, newNickName) => {
+    if (event.data.user.name !== newNickName) {
+        if (newNickName === undefined) {
+            do {
+                newNickName = new User().name;
+            } while (users.has(newNickName));
+        }
 
-        const userRef = users.get(oldName);
-        users.delete(oldName);
+        if (!users.has(newNickName)) {
+            const oldName = event.data.user.name;
 
-        userRef.user.name = newNickName;
-        users.set(newNickName, userRef);
+            const userRef = users.get(oldName);
+            users.delete(oldName);
 
-        event.data.socket.emit('setUser', userRef.user);
+            userRef.user.name = newNickName;
+            users.set(newNickName, userRef);
 
-        io.emit('updateUser', {target: oldName, updatedUser: userRef.user});
-    } else {
-        event.data.socket.emit('newMessage', new AnonymousMessage(
-            `<b><span style="color: red">ERROR: \\nick ${newNickName} - '${newNickName}' is already taken.</span></b>`
-        ));
+            event.data.socket.emit('setUser', userRef.user);
+
+            io.emit('updateUser', {target: oldName, updatedUser: userRef.user});
+        } else {
+            event.data.socket.emit('newMessage', new AnonymousMessage(
+                `<b><span style="color: red">ERROR: \\nick ${newNickName} - '${newNickName}' is already taken.</span></b>`
+            ));
+        }
     }
 });
-commandParser.on<CommandListenerData>(/\\nickcolor\s+([A-Fa-f0-9]{0, 6})/,(event, color) => {
-    console.log(color);
+
+commandParser.on<CommandListenerData>('nickcolor', [/(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})?/],(event, color) => {
+    if (color === undefined) {
+        color = new User().color;
+    } else {
+        color = '#' + color;
+    }
+
+    const user = event.data.user;
+    user.color = color;
+
+    event.data.socket.emit('setUser', user);
+    io.emit('updateUser', {target: user.name, updatedUser: user});
+}, (event, misformattedColor) => {
+    event.data.socket.emit('newMessage', new AnonymousMessage(
+        `<b><span style="color: red">ERROR: \\nickcolor ${misformattedColor} - '${misformattedColor}' is not a valid three or six digit hexadecimal color.</span></b>`
+    ));
 });
 
 io.on('connection', clientSocket => {
