@@ -60,6 +60,10 @@ commandParser.on<CommandListenerData>('nick', [/.*?/], (event, newNickName) => {
             event.data.socket.emit('setUser', userRef.user);
 
             io.emit('updateUser', {target: oldName, updatedUser: userRef.user});
+
+            io.emit('newMessage', new AnonymousMessage(
+                `<b><span style="color: ${userRef.user.color}">${oldName}</span></b> changed their nickname to <b><span style="color: ${userRef.user.color}">${userRef.user.name}</span></b>.`
+            ));
         } else {
             event.data.socket.emit('newMessage', new AnonymousMessage(
                 `<b><span style="color: red">ERROR: \\nick ${newNickName} - '${newNickName}' is already taken.</span></b>`
@@ -76,10 +80,15 @@ commandParser.on<CommandListenerData>('nickcolor', [/(?:[A-Fa-f0-9]{3}|[A-Fa-f0-
     }
 
     const user = event.data.user;
+    const oldColor = user.color;
     user.color = color;
 
     event.data.socket.emit('setUser', user);
     io.emit('updateUser', {target: user.name, updatedUser: user});
+
+    io.emit('newMessage', new AnonymousMessage(
+        `<b><span style="color: ${user.color}">${user.name}</span></b> changed their color from <b><span style="color: ${oldColor}">this</span></b> to <b><span style="color: ${user.color}">this</span></b>.`
+    ));
 }, (event, misformattedColor) => {
     event.data.socket.emit('newMessage', new AnonymousMessage(
         `<b><span style="color: red">ERROR: \\nickcolor ${misformattedColor} - '${misformattedColor}' is not a valid three or six digit hexadecimal color.</span></b>`
@@ -108,6 +117,11 @@ io.on('connection', clientSocket => {
 
     // Give new user the chat log
     clientSocket.emit('listMessages', messages);
+
+    // First message for the user in the chat log is who they are
+    clientSocket.emit('newMessage', new AnonymousMessage(
+        `You are <b><span style="color: ${user.color}">${user.name}</span></b>.`
+    ));
 
     // Listen for messages from client
     clientSocket.on('sendMessage', messageContent => {
