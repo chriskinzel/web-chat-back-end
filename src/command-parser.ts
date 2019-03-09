@@ -1,28 +1,30 @@
-export interface CommandListenerEvent<T = any> {
-    data: T;
+export type CommandHandler = (...args: string[]) => void;
+
+export class InvalidCommandError extends Error {
+    constructor() {
+        super('Invalid command');
+    }
 }
 
-export type CommandHandler<T> = (event: CommandListenerEvent<T>, ...args: string[]) => void;
-
-interface CommandListener<T> {
+interface CommandListener {
     commandName: string;
     argumentsFormat: RegExp[];
-    handler: CommandHandler<T>;
-    errorHandler: CommandHandler<T>;
+    handler: CommandHandler;
+    errorHandler: CommandHandler;
 }
 
 export class CommandParser {
-    private readonly registeredCommands: CommandListener<any>[] = [];
+    private readonly registeredCommands: CommandListener[] = [];
 
-    public on<T>(commandName: string, handler: CommandHandler<T>, errorHandler?: CommandHandler<T>)
+    public on<T>(commandName: string, handler: CommandHandler, errorHandler?: CommandHandler)
     public on<T>(commandName: string,
                  argumentsFormat: RegExp[],
-                 handler: CommandHandler<T>,
-                 errorHandler?: CommandHandler<T>);
+                 handler: CommandHandler,
+                 errorHandler?: CommandHandler);
     public on<T>(commandName: string,
-                 argumentsFormatOrHandler: RegExp[] | CommandHandler<T>,
-                 handlerOrErrorHandler?: CommandHandler<T>,
-                 errorHandler?: CommandHandler<T>) {
+                 argumentsFormatOrHandler: RegExp[] | CommandHandler,
+                 handlerOrErrorHandler?: CommandHandler,
+                 errorHandler?: CommandHandler) {
         if (Array.isArray(argumentsFormatOrHandler)) {
             const argumentsFormat = argumentsFormatOrHandler as RegExp[];
 
@@ -33,7 +35,7 @@ export class CommandParser {
                 errorHandler: errorHandler
             });
         } else {
-            const handler = argumentsFormatOrHandler as CommandHandler<T>;
+            const handler = argumentsFormatOrHandler as CommandHandler;
 
             this.registeredCommands.push({
                 commandName: commandName,
@@ -44,7 +46,7 @@ export class CommandParser {
         }
     }
 
-    public parseCommand(command: string, data?: any) {
+    public parseCommand(command: string) {
         for (const commandListener of this.registeredCommands) {
             const escapedCommandName = escapeRegExp(commandListener.commandName);
 
@@ -72,19 +74,19 @@ export class CommandParser {
 
                 if (commandRegex.test(command)) {
                     const args = command.match(commandRegex).slice(1);
-                    commandListener.handler({data: data}, ...args);
+                    commandListener.handler(...args);
                 } else if (commandListener.errorHandler) {
                     const args = command.match(commandAbstractFormatRegex).slice(1);
-                    commandListener.errorHandler({data: data}, ...args);
+                    commandListener.errorHandler(...args);
                 } else {
-                    throw 'Invalid Command';
+                    throw new InvalidCommandError();
                 }
 
                 return;
             }
         }
 
-        throw 'Invalid Command';
+        throw new InvalidCommandError();
     }
 }
 
