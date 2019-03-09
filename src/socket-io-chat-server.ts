@@ -103,6 +103,14 @@ export class SocketIOChatServer {
                 )
             });
 
+        commandParser.on('effect', [/dance|flip|random/], effectName => {
+
+        }, unrecognizedEffectName => {
+            const command = (unrecognizedEffectName) ? `\\effect ${unrecognizedEffectName}` : '\\effect';
+            this.sendErrorMessageToUser(clientSocket,
+                `${command} - effect must be one of dance, flip, or random.`)
+        });
+
         return commandParser;
     }
 
@@ -179,7 +187,7 @@ export class SocketIOChatServer {
                 ));
             } else {
                 this.sendErrorMessageToUser(clientSocket,
-                    `\\nick ${nickname} - '${nickname}' is already taken.`
+                    `\\nick ${nickname} - the nickname '${nickname}' is already taken.`
                 )
             }
         }

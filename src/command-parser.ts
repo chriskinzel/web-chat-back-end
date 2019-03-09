@@ -57,9 +57,9 @@ export class CommandParser {
                     : '(?:\\s+(.+))?')
                 .join('');
 
-            const commandAbstractFormatRegex = (commandListener.argumentsFormat.length === 0)
-                ? new RegExp(`^\\\\${escapedCommandName}\\s*$`)
-                : new RegExp(`^\\\\${escapedCommandName}${abstractArgumentFormat}\\s*$`);
+            const commandAbstractFormatRegex = new RegExp(
+                `^\\\\${escapedCommandName}(?:${abstractArgumentFormat})?\\s*$`
+            );
 
             if (commandAbstractFormatRegex.test(command)) {
                 const argumentsFormat = commandListener.argumentsFormat
@@ -68,9 +68,7 @@ export class CommandParser {
                         : `(?:\\s+(${regex.source.slice(0, -1)}))?`)
                     .join('');
 
-                const commandRegex = (commandListener.argumentsFormat.length === 0)
-                    ? new RegExp(`^\\\\${escapedCommandName}\\s*$`)
-                    : new RegExp(`^\\\\${escapedCommandName}${argumentsFormat}\\s*$`);
+                const commandRegex = new RegExp(`^\\\\${escapedCommandName}${argumentsFormat}\\s*$`);
 
                 if (commandRegex.test(command)) {
                     const args = command.match(commandRegex).slice(1);
