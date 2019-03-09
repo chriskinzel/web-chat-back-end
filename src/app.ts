@@ -34,9 +34,11 @@ const commandParser = new CommandParser();
 commandParser.on<CommandListenerData>('help', event => {
     event.data.socket.emit('newMessage', new AnonymousMessage(
         `<b>List of available commands:</b>
-  <b>\\help</b> - prints this help message
-  <b>\\nick [nickname]</b> - change your nickname to <b>[nickname]</b> or leave empty for a new random nickname
-  <b>\\nickcolor [RRGGBB] | [RGB]</b> - change your nickname color to the specified hexadecimal color code or leave empty for a random color`
+<ul>
+<li><b>\\help</b><div>- prints this help message</div></li>
+<li><b>\\nick [nickname]</b><div>- change your nickname to <b>[nickname]</b> or leave empty for a new random nickname</div></li>
+<li><b>\\nickcolor [<span style="color: red">RR</span><span style="color: green">GG</span><span style="color: blue">BB</span>] | [<span style="color: red">R</span><span style="color: green">G</span><span style="color: blue">B</span>]</b><div>- change your nickname color to the specified hexadecimal color code or leave empty for a random color</div></li>
+</ul>`
     ));
 });
 
