@@ -1,6 +1,4 @@
-function pickRandom<T>(array: T[]): T {
-    return array[Math.floor(Math.random() * array.length)];
-}
+import {pickRandom} from '../shared/pick-random';
 
 export class User {
     public name: string;

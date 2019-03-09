@@ -1,13 +1,17 @@
 import * as socketio from 'socket.io';
 
 import {CommandParser, InvalidCommandError} from './command-parser';
-import {b, div, li, span, ul} from './html-functions';
+import {b, div, li, span, ul} from './shared/html-functions';
 import {AnonymousMessage} from './models/anonymous-message';
 import {Message} from './models/message';
 import {User} from './models/user';
+import {pickRandom} from './shared/pick-random';
 
 export class SocketIOChatServer {
     private running = false;
+
+    private readonly effects = ['dance', 'flip'];
+    private readonly effectCommandArgumentRegex = new RegExp(`${this.effects.join('|')}|random|stop`);
 
     private readonly userMap = new Map<string, {user: User, refCount: number}>();
     private readonly messages: Message[] = [];
@@ -103,12 +107,16 @@ export class SocketIOChatServer {
                 )
             });
 
-        commandParser.on('effect', [/dance|flip|random|stop/], effectName => {
+        commandParser.on('effect', [this.effectCommandArgumentRegex], effectName => {
+            if (effectName === 'random') {
+                effectName = pickRandom(this.effects);
+            }
+
             this.io.emit('effect', effectName);
         }, unrecognizedEffectName => {
             const command = (unrecognizedEffectName) ? `\\effect ${unrecognizedEffectName}` : '\\effect';
             this.sendErrorMessageToUser(clientSocket,
-                `${command} - effect must be one of dance, flip, or random.`)
+                `${command} - effect must be one of ${this.effects.join(', ')} random, or stop.`)
         });
 
         return commandParser;
@@ -155,7 +163,7 @@ export class SocketIOChatServer {
                             '- change your nickname color to the specified hexadecimal color code or leave empty for a random color'
                         )
                     ),
-                    li({}, b({}, '\\effect dance | flip | random'), div({},
+                    li({}, b({}, `\\effect ${this.effects.join(' | ')} | random`), div({},
                         '- make all users screens perform the given effect'
                     )),
                     li({}, b({}, '\\effect stop'), div({},
