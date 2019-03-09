@@ -57,8 +57,6 @@ commandParser.on<CommandListenerData>('nick', [/.*?/], (event, newNickName) => {
             userRef.user.name = newNickName;
             users.set(newNickName, userRef);
 
-            event.data.socket.emit('setUser', userRef.user);
-
             io.emit('updateUser', {target: oldName, updatedUser: userRef.user});
 
             io.emit('newMessage', new AnonymousMessage(
@@ -83,7 +81,6 @@ commandParser.on<CommandListenerData>('nickcolor', [/(?:[A-Fa-f0-9]{3}|[A-Fa-f0-
     const oldColor = user.color;
     user.color = color;
 
-    event.data.socket.emit('setUser', user);
     io.emit('updateUser', {target: user.name, updatedUser: user});
 
     io.emit('newMessage', new AnonymousMessage(
@@ -96,14 +93,15 @@ commandParser.on<CommandListenerData>('nickcolor', [/(?:[A-Fa-f0-9]{3}|[A-Fa-f0-
 });
 
 io.on('connection', clientSocket => {
-    const user = User.fromJSON(clientSocket.request.cookies.user) || new User();
+    const previousUser = User.fromJSON(clientSocket.request.cookies.user);
+    const sessionUser = previousUser && users.get(previousUser.name) && users.get(previousUser.name).user;
+    const user = sessionUser || previousUser || new User();
+
     if (users.has(user.name)) {
         const userRef = users.get(user.name);
         userRef.refCount += 1;
-
-        users.set(user.name, userRef);
     } else {
-        users.set(user.name, {user, refCount: 1});
+        users.set(user.name, {user: user, refCount: 1});
 
         // Tell all clients about the new User
         io.emit('newUser', user);
