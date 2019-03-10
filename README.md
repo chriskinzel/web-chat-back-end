@@ -24,4 +24,4 @@ npm start
 ```
 
 **NOTE:** This repo does not include the pre-built Angular front-end required to run the front-end of the application.
-The front-end repo is available at [https://github.com/chriskinzel/web-chat-front-end].
+The front-end repo is available at https://github.com/chriskinzel/web-chat-front-end.
