@@ -1,5 +1,4 @@
-import * as socketio from 'socket.io';
-
+import {Server, Socket} from 'socket.io';
 import {CommandParser, InvalidCommandError} from './command-parser';
 import {b, div, li, span, ul} from './shared/html-functions';
 import {AnonymousMessage} from './models/anonymous-message';
@@ -16,7 +15,7 @@ export class SocketIOChatServer {
     private readonly userMap = new Map<string, {user: User, refCount: number}>();
     private readonly messages: Message[] = [];
 
-    constructor(private readonly io: socketio.Server) {}
+    constructor(private readonly io: Server) {}
 
     public start() {
         if (!this.running) {
@@ -49,7 +48,7 @@ export class SocketIOChatServer {
         });
     }
 
-    private onNewUserConnected(user: User, clientSocket: socketio.Socket) {
+    private onNewUserConnected(user: User, clientSocket: Socket) {
         const commandParser = this.getCommandParserForUser(user, clientSocket);
 
         // Tell new user who they are
@@ -87,7 +86,7 @@ export class SocketIOChatServer {
         });
     }
 
-    private getCommandParserForUser(user: User, clientSocket: socketio.Socket): CommandParser {
+    private getCommandParserForUser(user: User, clientSocket: Socket): CommandParser {
         const commandParser = new CommandParser();
         commandParser.on('help', () => {
             this.sendHelpMessageToClient(clientSocket);
@@ -140,7 +139,7 @@ export class SocketIOChatServer {
         }
     }
 
-    private sendHelpMessageToClient(clientSocket: socketio.Socket) {
+    private sendHelpMessageToClient(clientSocket: Socket) {
         clientSocket.emit('newMessage', new AnonymousMessage(
             span({},
                 b({}, `List of available commands:`),
@@ -174,7 +173,7 @@ export class SocketIOChatServer {
         ));
     }
 
-    private setUserNickName(user: User, clientSocket: socketio.Socket, nickname?: string) {
+    private setUserNickName(user: User, clientSocket: Socket, nickname?: string) {
         if (user.name !== nickname) {
             if (nickname === undefined) {
                 do {
@@ -221,7 +220,7 @@ export class SocketIOChatServer {
         ));
     }
 
-    private sendErrorMessageToUser(clientSocket: socketio.Socket, errorMessage: string) {
+    private sendErrorMessageToUser(clientSocket: Socket, errorMessage: string) {
         clientSocket.emit('newMessage', new AnonymousMessage(
             boldColoredText(`ERROR: ${errorMessage}`, 'red')
         ));
