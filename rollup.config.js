@@ -16,6 +16,7 @@ export default {
     external: [
         ...Object.keys(pkg.dependencies || {}),
     ...Object.keys(pkg.peerDependencies || {}),
+    'path'
 ],
 plugins: [
     // This custom plugin is needed to fix crappy commonjs module imports
