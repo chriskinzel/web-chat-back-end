@@ -141,5 +141,6 @@ fabric.properties
 
 # TypeScript compiled output directory
 bin/
+public/
 .rpt2_cache/
 
